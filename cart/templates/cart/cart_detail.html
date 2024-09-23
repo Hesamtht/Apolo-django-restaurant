@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سبد خرید شما</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/detail.css' %}">
+    <style>
+        #notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ff5722;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10001;
+            display: none;
+            text-align: center;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .center-button {
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="container">
+        <h1 class="display-4 text-center">سبد خرید شما</h1>
+        {% if cart_items %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>نام غذا</th>
+                        <th>تعداد</th>
+                        <th>قیمت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody id="cart-items-container">
+                    {% for item in cart_items %}
+                    <tr id="cart-item-{{ item.food.id }}">
+                        <td>{{ item.food.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.food.price }}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm remove-from-cart-btn" data-food-id="{{ item.food.id }}">حذف</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="text-right">جمع کل: <span id="total-price">{{ total_price }}</span> تومان</p>
+        {% else %}
+            <p class="text-center">سبد خرید شما خالی است.</p>
+        {% endif %}
+
+        <div class="button-container">
+            <a href="{% url 'home:home' %}" class="btn btn-primary center-button">بازگشت به صفحه اصلی</a>
+            <a href="{% url 'cart:buy' %}" class="btn btn-secondary">ادامه خرید</a>
+        </div>
+    </div>
+
+    <div id="notification">از سبدتون حذف شد!</div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        $(document).ready(function() {
+            $(document).on('click', '.remove-from-cart-btn', function(e) {
+                e.preventDefault();
+                const foodId = $(this).data('food-id');
+                $.ajax({
+                    type: 'POST',
+                    url: `{% url 'cart:remove_from_cart' food_id=0 %}`.replace('0', foodId),
+                    data: {
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#cart-item-' + foodId).remove();
+                            $('#total-price').text(response.total_price);
+                            showNotification('از سبدتون حذف شد!');
+                        } else {
+                            showNotification('Failed to remove food from cart!');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(xhr.responseText);
+                        showNotification('Error removing food from cart.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
